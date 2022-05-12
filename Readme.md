@@ -8,4 +8,4 @@
 - Toggle Mod List Keybind => A keybind to toggle whether modlist is hidden or not. Will only work when modlist is visible (Defualt: none)
 
 Note: You can choose different Placeholder Texts by editing the globalsetting file.
-![Example of mod in use](Readme Assets/Example.png)
+![Example of mod in use](ReadmeAssets/Example.png)
