@@ -1,5 +1,8 @@
-﻿using Modding;
+﻿global using GlobalEnums;
+global using Modding;
+global using UnityEngine;
 using System;
+using System.Linq;
 using System.Reflection;
 using Modding.Menu;
 using Modding.Menu.Config;
@@ -7,7 +10,6 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
-using UnityEngine;
 using UnityEngine.UI;
 
 namespace HideModList;
@@ -15,7 +17,8 @@ namespace HideModList;
 public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
 {
     private static ILHook updateModTextHook = null;
-    private static MethodInfo updateModTextMethodInfo= Type.GetType("Modding.ModLoader, Assembly-CSharp").GetMethod("UpdateModText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+    private static Type ModLoaderType = Type.GetType("Modding.ModLoader, Assembly-CSharp");
+    private static MethodInfo updateModTextMethodInfo= ModLoaderType.GetMethod("UpdateModText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
     private static FastReflectionDelegate updateModTextFunction = updateModTextMethodInfo.GetFastDelegate();
 
     public static HideModList Instance;
@@ -25,19 +28,45 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     public static GlobalSettings settings { get; set; } = new GlobalSettings();
     public void OnLoadGlobal(GlobalSettings s) => settings = s;
     public GlobalSettings OnSaveGlobal() => settings;
-    
+
     private void CallUpdateModText() => updateModTextFunction.Invoke(null, null);
-    public override string GetVersion() => "1.0";
+    public override string GetVersion() => "1.1";
 
     public override void Initialize()
     {
         Instance ??= this;
         if (settings.modListHidden) CreateILHook(true);
+        On.UIManager.SetMenuState += OnUIManagerSetMenuState;
+    }
+
+    private void OnUIManagerSetMenuState(On.UIManager.orig_SetMenuState orig, UIManager self, MainMenuState newstate)
+    {
+        if (settings.HideOrShowWithPlayModeMenu)
+        {
+            if (newstate == MainMenuState.PLAY_MODE_MENU)
+            {
+                settings.modListHidden = true;
+                
+                CreateILHook();
+
+                HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
+            }
+            else
+            {
+                settings.modListHidden = false;
+                
+                RemoveILHook();
+
+                HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
+            }
+        }
+
+        orig(self, newstate);
     }
 
     public HideModList()
     {
-        GameObject HideModListGo = new GameObject("HideModListGo", typeof(KeypressMonoBehaviour));
+        GameObject HideModListGo = new GameObject("HideModListGo", typeof(KeyAndTextMonoBehaviour));
         GameObject.DontDestroyOnLoad(HideModListGo);
     }
 
@@ -64,14 +93,31 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
         ILCursor cursor = new ILCursor(il).Goto(0);
 
         //for verification reasons not going to publicly explain what is happening here
-        cursor.GotoNext
-        (
-            i => i.MatchLdstr(" : ")
-        );
-        cursor.Emit(OpCodes.Pop);
-        for (int i = 0; i < 5; i++) cursor.Remove();
-        cursor.EmitDelegate(() => settings.placeHolder);
+        if (cursor.TryGotoNext(i => i.MatchLdstr(" : ")))
+        {
+            cursor.Emit(OpCodes.Pop);
 
+
+            for (int i = 0; i < 5; i++) cursor.Remove();
+            cursor.EmitDelegate(() => settings.placeHolder);
+        }
+
+        cursor.Goto(0);
+        if (cursor.TryGotoNext(MoveType.After,
+                i => i.MatchLdsfld<ModHooks>("ModVersion")))
+        {
+            cursor.EmitDelegate<Func<string,string>>(GetNumMods);
+        }
+    }
+    
+    private string GetNumMods(string version)
+    {
+        if (Int32.Parse(ModHooks.ModVersion.Split('-')[1]) <= 68)
+        {
+            return version + $"\n{ModHooks.LoadedModsWithVersions.Count.ToString()} Loaded Mods";
+        }
+        
+        return version + $"\nWith {ModHooks.GetAllMods(false, true).Count().ToString()} Mods";
     }
 
     public MenuScreen GetMenuScreen(MenuScreen modListMenu, ModToggleDelegates? toggleDelegates)
@@ -122,6 +168,19 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
                         s.optionList.SetOptionTo(index);
                     },
                 });
+                c.AddHorizontalOption("Hide/Show with play mode menu", new HorizontalOptionConfig()
+                {
+                    Label = "Hide/Show with play mode menu",
+                    Description = new DescriptionInfo
+                    {
+                        Text = "Should ModList hide or show with play mode menu (for menuchanger)"
+                    },
+
+                    Options = new[] { "True", "False" },
+                    ApplySetting = (_, s) => settings.HideOrShowWithPlayModeMenu = s == 0,
+                    RefreshSetting = (s, _) => s.optionList.SetOptionTo(settings.HideOrShowWithPlayModeMenu ? 0 : 1),
+                });
+                
                 c.AddKeybind("Toggle Mod List", settings.keybinds.keyHideModList, new KeybindConfig
                 {
                     Label = "Toggle Mod List",

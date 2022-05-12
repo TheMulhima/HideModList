@@ -9,6 +9,7 @@ public class GlobalSettings
     public bool modListHidden = true;
     public string placeHolder = "?";
     public List<string> placeHolderOptions = new() { "?", ".", " ", "Unknown" };
+    public bool HideOrShowWithPlayModeMenu = false;
         
     [JsonConverter(typeof(PlayerActionSetConverter))]
     public KeyBinds keybinds = new KeyBinds();
