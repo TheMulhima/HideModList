@@ -35,7 +35,11 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     public override void Initialize()
     {
         Instance ??= this;
-        if (settings.modListHidden) CreateILHook(true);
+        ModHooks.FinishedLoadingModsHook += () =>
+        {
+            //makes sure modlog log doesnt get yeeted
+            if (settings.modListHidden) CreateILHook();
+        };
         On.UIManager.SetMenuState += OnUIManagerSetMenuState;
     }
 
@@ -70,15 +74,14 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
         GameObject.DontDestroyOnLoad(HideModListGo);
     }
 
-    public void CreateILHook(bool Init = false)
+    public void CreateILHook()
     {
         if (updateModTextHook == null)
         {
             updateModTextHook = new ILHook(updateModTextMethodInfo, NewUpdateModText);
         }
 
-        //calling update mod text before all mods load is probably not gonna end well
-        if (!Init) CallUpdateModText();
+        CallUpdateModText();
     }
 
     public void RemoveILHook()
@@ -109,7 +112,7 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
             cursor.EmitDelegate<Func<string,string>>(GetNumMods);
         }
     }
-    
+
     private string GetNumMods(string version)
     {
         if (Int32.Parse(ModHooks.ModVersion.Split('-')[1]) <= 68)

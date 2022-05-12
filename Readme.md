@@ -5,6 +5,7 @@
 ## Settings in ModMenu
 - Hide Mod List => Whether or not to hide modlist. (Defualt: True),
 - Placeholder Text => The text that will be shown when modlist is hidden (Defualt: "?")
+- Hide/Show with play mode menu => Should ModList hide or show with play mode menu. For use with for menuchanger
 - Toggle Mod List Keybind => A keybind to toggle whether modlist is hidden or not. Will only work when modlist is visible (Defualt: none)
 
 Note: You can choose different Placeholder Texts by editing the globalsetting file.

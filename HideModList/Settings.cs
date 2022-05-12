@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace HideModList;
 public class GlobalSettings
 {
-    public bool modListHidden = true;
+    public bool modListHidden = false;
     public string placeHolder = "?";
     public List<string> placeHolderOptions = new() { "?", ".", " ", "Unknown" };
     public bool HideOrShowWithPlayModeMenu = false;
