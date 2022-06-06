@@ -5,7 +5,7 @@ public class KeyAndTextMonoBehaviour : MonoBehaviour
 {
     public void OnGUI()
     {
-        if (GameManager.instance.GetSceneNameString() == Constants.MENU_SCENE)
+        if (GameManager.instance?.GetSceneNameString() == Constants.MENU_SCENE)
         {
             if (!HideModList.settings.modListHidden) return;
             if (UIManager.instance.uiState is not(UIState.MAIN_MENU_HOME or UIState.PAUSED)) return;
