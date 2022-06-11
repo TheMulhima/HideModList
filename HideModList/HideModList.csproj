@@ -3,7 +3,7 @@
         <ProjectGuid>{B600F74C-9940-432B-B4C2-72A17091DF0C}</ProjectGuid>
         <RootNamespace>HideModList</RootNamespace>
         <AssemblyTitle>HideModList</AssemblyTitle>
-        <AssemblyVersion>0.0.2.0</AssemblyVersion>
+        <AssemblyVersion>0.0.0.0</AssemblyVersion>
         <Deterministic>true</Deterministic>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <LangVersion>latest</LangVersion>

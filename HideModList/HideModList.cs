@@ -30,7 +30,7 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     public GlobalSettings OnSaveGlobal() => settings;
 
     private void CallUpdateModText() => updateModTextFunction.Invoke(null, null);
-    public override string GetVersion() => "1.1";
+    public override string GetVersion() => "1.2";
 
     public override void Initialize()
     {
@@ -115,11 +115,6 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
 
     private string GetNumMods(string version)
     {
-        if (Int32.Parse(ModHooks.ModVersion.Split('-')[1]) <= 68)
-        {
-            return version + $"\n{ModHooks.LoadedModsWithVersions.Count.ToString()} Loaded Mods";
-        }
-        
         return version + $"\nWith {ModHooks.GetAllMods(false, true).Count().ToString()} Mods";
     }
 
@@ -171,12 +166,12 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
                         s.optionList.SetOptionTo(index);
                     },
                 });
-                c.AddHorizontalOption("Hide/Show with play mode menu", new HorizontalOptionConfig()
+                c.AddHorizontalOption("MenuChanger Integration", new HorizontalOptionConfig()
                 {
-                    Label = "Hide/Show with play mode menu",
+                    Label = "MenuChanger Integration",
                     Description = new DescriptionInfo
                     {
-                        Text = "Should ModList hide or show with play mode menu (for menuchanger)"
+                        Text = "Hide/Show the modlist with play mode menu"
                     },
 
                     Options = new[] { "True", "False" },
