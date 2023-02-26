@@ -100,8 +100,9 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
         {
             cursor.Emit(OpCodes.Pop);
 
-
-            for (int i = 0; i < 5; i++) cursor.Remove();
+            int remove = int.Parse(ModHooks.ModVersion.Split('-')[1]) >= 74 ? 6 : 5;
+            
+            for (int i = 0; i < remove; i++) cursor.Remove();
             cursor.EmitDelegate(() => settings.placeHolder);
         }
 
