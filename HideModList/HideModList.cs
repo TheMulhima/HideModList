@@ -30,7 +30,7 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     public GlobalSettings OnSaveGlobal() => settings;
 
     private void CallUpdateModText() => updateModTextFunction.Invoke(null, null);
-    public override string GetVersion() => "2.2";
+    public override string GetVersion() => "2.2.1";
 
     public override void Initialize()
     {
