@@ -7,7 +7,7 @@ public static class HideModListExport
 {
     public static void ShowList() => HideModList.ShowList();
 
-    public static void HideList() => HideModList.HideList();
+    public static void HideList(bool usePlaceHolder) => HideModList.HideList(usePlaceHolder);
 
-    public static void UpdateListState(bool isHidden) => HideModList.UpdateListState(isHidden);
+    public static void UpdateListState(bool isHidden, bool usePlaceHolder) => HideModList.UpdateListState(isHidden, usePlaceHolder);
 }

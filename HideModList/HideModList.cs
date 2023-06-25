@@ -32,7 +32,9 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     public GlobalSettings OnSaveGlobal() => settings;
 
     private void CallUpdateModText() => updateModTextFunction.Invoke(null, null);
-    public override string GetVersion() => "2.2.1";
+    public override string GetVersion() => "2.3.0";
+
+    private static bool UsePlaceHolder = true;
 
     public HideModList()
     {
@@ -70,11 +72,13 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     
     /// <summary>
     /// Forces list of mods to be hidden
+    /// <param name="usePlaceHolder">Should the mod text be replaced with a smaller placeholder</param>
     /// </summary>
     [PublicAPI]
-    public static void HideList()
+    public static void HideList(bool usePlaceHolder = true)
     {
         settings.modListHidden = true;
+        UsePlaceHolder = usePlaceHolder;
         Instance.CreateILHook();
         Instance.HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
     }
@@ -82,13 +86,14 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     /// <summary>
     /// Changes the state of the list of mods to hidden or shown depending on the the value of <paramref name="isHidden"/>
     /// <param name="isHidden">Should the list be hidden</param>
+    /// <param name="usePlaceHolder">Should the mod text be replaced with a smaller placeholder. Will be ignored if <paramref name="isHidden"/> is set to false</param>
     /// </summary>
     [PublicAPI]
-    public static void UpdateListState(bool isHidden)
+    public static void UpdateListState(bool isHidden, bool usePlaceHolder = true)
     {
         if (isHidden)
         {
-            HideList();
+            HideList(usePlaceHolder);
         }
         else
         {
@@ -132,7 +137,7 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
             int remove = int.Parse(ModHooks.ModVersion.Split('-')[1]) >= 74 ? 6 : 5;
 
             for (int i = 0; i < remove; i++) cursor.Remove();
-            cursor.EmitDelegate(() => settings.placeHolder);
+            cursor.EmitDelegate(() => UsePlaceHolder ? settings.placeHolder : "");
         }
 
         cursor.Goto(0);

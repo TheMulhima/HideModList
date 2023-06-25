@@ -11,9 +11,9 @@
 ## Mod Interop
 Hide mod list allows other mods, via MonoMod's ModInterop, to call HideModLists internal functions.
 To do this, add the following code to your mod and then you will be able to call the following methods:
-- `HideModList.HideList()` => Hides the mod list
+- `HideModList.HideList(bool usePlaceHolder)` => Hides the mod list
 - `HideModList.ShowList()` => Shows the mod list
-- `HideModList.UpdateListState(bool isHidden)` => Changes the state of the list of mods to hidden or shown depending on the the value of `isHidden`
+- `HideModList.UpdateListState(bool isHidden, bool usePlaceHolder)` => Changes the state of the list of mods to hidden or shown depending on the the value of `isHidden`
 ```cs
 using System;
 using MonoMod.ModInterop;
@@ -27,8 +27,8 @@ namespace YourModNameSpace
         private static class HideModListImport
         {
             public static Action ShowList = null;
-            public static Action HideList = null;
-            public static Action<bool> UpdateListState = null;
+            public static Action<bool> HideList = null;
+            public static Action<bool, bool> UpdateListState = null;
         }
         static HideModList()
         {
@@ -38,9 +38,10 @@ namespace YourModNameSpace
 
         /// <summary>
         /// Forces list of mods to be hidden
+        /// <param name="usePlaceHolder">Should the mod text be replaced with a smaller placeholder</param>
         /// </summary>
-        public static void HideList()
-            => HideModListImport.HideList?.Invoke();   
+        public static void HideList(bool usePlaceHolder = true)
+            => HideModListImport.HideList?.Invoke(usePlaceHolder);   
             
         /// <summary>
         /// Forces list of mods to be shown
@@ -51,9 +52,10 @@ namespace YourModNameSpace
         /// <summary>
         /// Changes the state of the list of mods to hidden or shown depending on the the value of <paramref name="isHidden"/>
         /// <param name="isHidden">Should the list be hidden</param>
+        /// <param name="usePlaceHolder">Should the mod text be replaced with a smaller placeholder</param>
         /// </summary>
-        public static void UpdateListState(bool isHidden) 
-            => HideModListImport.UpdateListState?.Invoke(isHidden);
+        public static void UpdateListState(bool isHidden, bool usePlaceHolder = true) 
+            => HideModListImport.UpdateListState?.Invoke(isHidden, usePlaceHolder);
     }
 }
 
