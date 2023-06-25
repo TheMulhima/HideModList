@@ -4,10 +4,12 @@ global using UnityEngine;
 using System;
 using System.Linq;
 using System.Reflection;
+using JetBrains.Annotations;
 using Modding.Menu;
 using Modding.Menu.Config;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.ModInterop;
 using MonoMod.RuntimeDetour;
 using MonoMod.Utils;
 using UnityEngine.UI;
@@ -21,70 +23,97 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     private static MethodInfo updateModTextMethodInfo= ModLoaderType.GetMethod("UpdateModText", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
     private static FastReflectionDelegate updateModTextFunction = updateModTextMethodInfo.GetFastDelegate();
 
-    public static HideModList Instance;
-    public MenuOptionHorizontal HideModListToggle;
+    internal static HideModList Instance;
+    internal MenuOptionHorizontal HideModListToggle;
 
     public bool ToggleButtonInsideMenu { get; set; }
-    public static GlobalSettings settings { get; set; } = new GlobalSettings();
+    internal static GlobalSettings settings { get; private set; } = new GlobalSettings();
     public void OnLoadGlobal(GlobalSettings s) => settings = s;
     public GlobalSettings OnSaveGlobal() => settings;
 
     private void CallUpdateModText() => updateModTextFunction.Invoke(null, null);
     public override string GetVersion() => "2.2.1";
 
+    public HideModList()
+    {
+        // Register exports early so other mods can use them when initializing
+        typeof(HideModListExport).ModInterop();
+    }
+
     public override void Initialize()
     {
         Instance ??= this;
+        
+        GameObject HideModListGo = new GameObject("HideModListGo", typeof(KeyAndTextMonoBehaviour));
+        UnityEngine.Object.DontDestroyOnLoad(HideModListGo);
+        
         ModHooks.FinishedLoadingModsHook += () =>
         {
-            //makes sure modlog log doesnt get yeeted
+            // we do this in finished mod load hook to make sure the initial logging of mods list doesnt get messed with
             if (settings.modListHidden) CreateILHook();
         };
-        On.UIManager.SetMenuState += OnUIManagerSetMenuState;
+        
+        // Removes the modlist for menu changer menus. Mostly so it doesn't come in the way of rando settings
+        On.UIManager.SetMenuState += HideOnMenuChangerMenu;
+    }
+    
+    /// <summary>
+    /// Forces list of mods to be shown
+    /// </summary>
+    [PublicAPI]
+    public static void ShowList()
+    {
+        settings.modListHidden = false;
+        Instance.RemoveILHook();
+        Instance.HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
+    }
+    
+    /// <summary>
+    /// Forces list of mods to be hidden
+    /// </summary>
+    [PublicAPI]
+    public static void HideList()
+    {
+        settings.modListHidden = true;
+        Instance.CreateILHook();
+        Instance.HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
+    }
+    
+    /// <summary>
+    /// Changes the state of the list of mods to hidden or shown depending on the the value of <paramref name="isHidden"/>
+    /// <param name="isHidden">Should the list be hidden</param>
+    /// </summary>
+    [PublicAPI]
+    public static void UpdateListState(bool isHidden)
+    {
+        if (isHidden)
+        {
+            HideList();
+        }
+        else
+        {
+            ShowList();
+        }
     }
 
-    private void OnUIManagerSetMenuState(On.UIManager.orig_SetMenuState orig, UIManager self, MainMenuState newstate)
+    private void HideOnMenuChangerMenu(On.UIManager.orig_SetMenuState orig, UIManager self, MainMenuState newstate)
     {
         if (settings.HideOrShowWithPlayModeMenu)
         {
-            if (newstate == MainMenuState.PLAY_MODE_MENU)
-            {
-                settings.modListHidden = true;
-                
-                CreateILHook();
-
-                HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
-            }
-            else
-            {
-                settings.modListHidden = false;
-                
-                RemoveILHook();
-
-                HideModListToggle.SetOptionTo(settings.modListHidden ? 0 : 1);
-            }
+            UpdateListState(isHidden: newstate == MainMenuState.PLAY_MODE_MENU);
         }
 
         orig(self, newstate);
     }
 
-    public HideModList()
+    internal void CreateILHook()
     {
-        GameObject HideModListGo = new GameObject("HideModListGo", typeof(KeyAndTextMonoBehaviour));
-        GameObject.DontDestroyOnLoad(HideModListGo);
-    }
-
-    public void CreateILHook()
-    {
-        if (updateModTextHook == null)
-        {
-            updateModTextHook = new ILHook(updateModTextMethodInfo, NewUpdateModText);
-        }
+        updateModTextHook ??= new ILHook(updateModTextMethodInfo, NewUpdateModText);
 
         CallUpdateModText();
     }
 
-    public void RemoveILHook()
+    internal void RemoveILHook()
     {
         updateModTextHook?.Dispose();
         updateModTextHook = null;
@@ -95,13 +124,13 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
     {
         ILCursor cursor = new ILCursor(il).Goto(0);
 
-        //for verification reasons not going to publicly explain what is happening here
+        // for src verification reasons not going to publicly explain what is happening here
         if (cursor.TryGotoNext(i => i.MatchLdstr(" : ")))
         {
             cursor.Emit(OpCodes.Pop);
 
             int remove = int.Parse(ModHooks.ModVersion.Split('-')[1]) >= 74 ? 6 : 5;
-            
+
             for (int i = 0; i < remove; i++) cursor.Remove();
             cursor.EmitDelegate(() => settings.placeHolder);
         }
@@ -110,13 +139,9 @@ public class HideModList : Mod, ICustomMenuMod, IGlobalSettings<GlobalSettings>
         if (cursor.TryGotoNext(MoveType.After,
                 i => i.MatchLdsfld<ModHooks>("ModVersion")))
         {
-            cursor.EmitDelegate<Func<string,string>>(GetNumMods);
+            cursor.EmitDelegate<Func<string, string>>(orig => 
+                orig + $"\nWith {ModHooks.GetAllMods(false, true).Count().ToString()} Mods");
         }
-    }
-
-    private string GetNumMods(string version)
-    {
-        return version + $"\nWith {ModHooks.GetAllMods(false, true).Count().ToString()} Mods";
     }
 
     public MenuScreen GetMenuScreen(MenuScreen modListMenu, ModToggleDelegates? toggleDelegates)
